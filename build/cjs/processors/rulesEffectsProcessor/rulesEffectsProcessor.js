@@ -13,6 +13,8 @@ var _constants = require("../../constants");
 
 var _commonUtils = require("../../commonUtils");
 
+var _helpers = require("../../helpers");
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 const sanitiseFalsy = value => {
@@ -22,25 +24,6 @@ const sanitiseFalsy = value => {
 
   if (value === 0) {
     return 0;
-  }
-
-  return '';
-};
-
-const getFormName = _ref => {
-  let {
-    dataElementId,
-    dataElements,
-    trackedEntityAttributes,
-    trackedEntityAttributeId
-  } = _ref;
-
-  if (dataElementId && dataElements && dataElements[dataElementId]) {
-    return dataElements[dataElementId].name;
-  }
-
-  if (trackedEntityAttributeId && trackedEntityAttributes && trackedEntityAttributes[trackedEntityAttributeId]) {
-    return trackedEntityAttributes[trackedEntityAttributeId].displayFormName && trackedEntityAttributes[trackedEntityAttributeId].displayName;
   }
 
   return '';
@@ -146,17 +129,20 @@ function getRulesEffectsProcessor(outputConverters) {
     return effects;
   }
 
-  function processHideField(effect, dataElements, trackedEntityAttributes) {
-    return createEffectsForConfiguredDataTypes(effect, () => ({
+  function processHideField(effect, dataElements, trackedEntityAttributes, formValues, onProcessValue) {
+    const outputEffects = createEffectsForConfiguredDataTypes(effect, () => ({
       type: _constants.effectActions.HIDE_FIELD,
-      content: effect.content,
-      name: getFormName({
-        dataElements,
-        dataElementId: effect.dataElementId,
-        trackedEntityAttributes,
-        trackedEntityAttributeId: effect.trackedEntityAttributeId
-      })
+      content: effect.content
     }));
+    return (0, _helpers.getOutputEffectsWithPreviousValueCheck)({
+      outputEffects,
+      formValues,
+      dataElementId: effect.dataElementId,
+      trackedEntityAttributeId: effect.trackedEntityAttributeId,
+      dataElements,
+      trackedEntityAttributes,
+      onProcessValue
+    });
   }
 
   function processShowError(effect) {
@@ -255,14 +241,22 @@ function getRulesEffectsProcessor(outputConverters) {
     [_constants.effectActions.SHOW_OPTION_GROUP]: processShowOptionGroup
   };
 
-  function processRulesEffects(effects, dataElements, trackedEntityAttributes) {
+  function processRulesEffects(_ref) {
+    let {
+      effects,
+      dataElements,
+      trackedEntityAttributes,
+      formValues,
+      onProcessValue
+    } = _ref;
+
     if (effects) {
       return effects.filter(_ref2 => {
         let {
           action
         } = _ref2;
         return mapActionsToProcessor[action];
-      }).flatMap(effect => mapActionsToProcessor[effect.action](effect, dataElements, trackedEntityAttributes)) // when mapActionsToProcessor function returns `null` we filter those value out.
+      }).flatMap(effect => mapActionsToProcessor[effect.action](effect, dataElements, trackedEntityAttributes, formValues, onProcessValue)) // when mapActionsToProcessor function returns `null` we filter those value out.
       .filter(keepTruthyValues => keepTruthyValues);
     }
 

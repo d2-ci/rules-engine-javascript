@@ -9,8 +9,8 @@ export class RulesEngine {
   constructor(inputConverter, outputConverter, dateUtils, environment) {
     this.inputConverter = inputConverter;
     this.outputConverter = outputConverter;
-    const valueProcessor = new ValueProcessor(inputConverter);
-    this.variableService = new VariableService(valueProcessor.processValue, dateUtils, environment);
+    this.valueProcessor = new ValueProcessor(inputConverter);
+    this.variableService = new VariableService(this.valueProcessor.processValue, dateUtils, environment);
     this.dateUtils = dateUtils;
   }
   /**
@@ -121,7 +121,8 @@ export class RulesEngine {
             optionId,
             content,
             displayContent,
-            style
+            style,
+            name
           } = _ref2;
           let actionExpressionResult;
 
@@ -152,7 +153,8 @@ export class RulesEngine {
             optionId,
             content,
             displayContent,
-            style
+            style,
+            name
           };
         });
       }
@@ -160,7 +162,14 @@ export class RulesEngine {
       return programRuleEffects;
     }).filter(ruleEffects => ruleEffects);
     const processRulesEffects = getRulesEffectsProcessor(this.outputConverter);
-    return processRulesEffects(effects, dataElements, trackedEntityAttributes);
+    const formValues = currentEvent || selectedEntity;
+    return processRulesEffects({
+      effects,
+      dataElements,
+      trackedEntityAttributes,
+      formValues,
+      onProcessValue: this.valueProcessor.processValue
+    });
   }
 
   setSelectedUserRoles(userRoles) {
